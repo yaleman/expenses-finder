@@ -1,0 +1,8 @@
+[package]
+name = "expenses-finder"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+atty = "0.2.14"
+combinations = "0.1.0"
