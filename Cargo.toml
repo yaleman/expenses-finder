@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 atty = "0.2.14"
 combinations = "0.1.0"
+rayon = "1.10.0"

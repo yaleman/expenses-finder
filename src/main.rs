@@ -1,9 +1,9 @@
-use combinations::Combinations;
-use std::collections::HashSet;
+use expenses_finder::{find_combinations, parse_line, remove_paid_things};
+use rayon::prelude::*;
 
 fn main() {
-    let mut amounts: Vec<u64> = Vec::new();
-    let mut lines: Vec<String> = Vec::new();
+    let mut amounts = Vec::new();
+    let mut lines = Vec::new();
     // check if we're in interactive mode
     if atty::is(atty::Stream::Stdin) {
         eprintln!("Paste expense lines in and then hit ctrl-d on a blank line when done");
@@ -15,25 +15,19 @@ fn main() {
         match std::io::stdin().read_line(&mut buffer) {
             Ok(0) => break,
             Ok(_) => {
-                for term in buffer.split_whitespace() {
-                    if let Ok(amount) = term.parse::<f64>() {
-                        if (amount * 100.0) as u64 != 0 {
-                            amounts.push((amount * 100.0) as u64);
-                        }
-                    }
+                if let Some(new_amounts) = parse_line(&buffer) {
+                    amounts.extend(new_amounts);
+                    lines.push(buffer.trim().to_string());
                 }
-                lines.push(buffer.trim().to_string());
             }
             Err(e) => {
                 eprintln!("Error reading from stdin: {}", e);
-                // std::process::exit(1);
                 break;
             }
         }
     }
 
     // get the search value from argv
-
     let search_value = match std::env::args().nth(1) {
         Some(value) => value,
         None => {
@@ -53,7 +47,9 @@ fn main() {
         }
     };
 
-    if amounts.contains(&((search_value * 100.0) as u64)) {
+    remove_paid_things(&mut amounts, &mut lines);
+
+    if amounts.contains(&((search_value * 100.0) as i64)) {
         let index = lines
             .iter()
             .position(|x| x.contains(&search_value.to_string()))
@@ -64,42 +60,14 @@ fn main() {
         return;
     }
 
-    let search_value_u64 = (search_value * 100.0) as u64;
+    let search_value_i64 = (search_value * 100.0) as i64;
 
-    let mut seen_combinations = HashSet::new();
+    let combicounts: Vec<usize> = (2..(amounts.len())).collect();
+    // do the searchything
+    let found_combination = combicounts
+        .into_par_iter()
+        .any(|combicount| find_combinations(combicount, amounts.clone(), &lines, search_value_i64));
 
-    let mut found_combination = false;
-
-    for combicount in 2..amounts.len() {
-        for combination in Combinations::new(amounts.clone(), combicount) {
-            if seen_combinations.contains(&combination) {
-                continue;
-            }
-
-            if combination.iter().sum::<u64>() == search_value_u64 {
-                found_combination = true;
-                println!("######################################");
-                println!(
-                    "Found combo: {}",
-                    combination
-                        .clone()
-                        .into_iter()
-                        .map(|f| (f as f64 / 100.0).to_string())
-                        .collect::<Vec<String>>()
-                        .join(", ")
-                );
-                for element in &combination {
-                    let searchval = (*element as f64 / 100.0).to_string();
-                    lines.iter().for_each(|line| {
-                        if line.contains(&searchval) {
-                            println!("{}", line);
-                        }
-                    })
-                }
-                seen_combinations.insert(combination);
-            }
-        }
-    }
     if !found_combination {
         eprintln!("No combination found for ${} :(", search_value);
     }
