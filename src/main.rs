@@ -5,7 +5,7 @@ fn main() {
     let mut amounts = Vec::new();
     let mut lines = Vec::new();
     // check if we're in interactive mode
-    if atty::is(atty::Stream::Stdin) {
+    if is_terminal::is_terminal(&std::io::stdin()) {
         eprintln!("Paste expense lines in and then hit ctrl-d on a blank line when done");
     }
 
