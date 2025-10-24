@@ -5,5 +5,5 @@ edition = "2021"
 
 [dependencies]
 combinations = "0.1.0"
-is-terminal = "0.4.16"
+is-terminal = "0.4.17"
 rayon = "1.11.0"
